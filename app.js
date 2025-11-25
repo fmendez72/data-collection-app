@@ -316,7 +316,7 @@ function loadJobData() {
     hotInstance.destroy();
   }
 
-  // Build column definitions
+  // Build column definitions (base configuration)
   const columns = [
     {
       data: 0, // id
@@ -360,19 +360,6 @@ function loadJobData() {
     }
   ];
 
-  // Override answer column with dropdown if applicable
-  currentTemplate.questions.forEach((q) => {
-    if (q.answer_type === 'dropdown' && q.answer_options.length > 0) {
-      columns[2] = {
-        data: 2,
-        type: 'dropdown',
-        source: q.answer_options,
-        readOnly: isReadOnly,
-        width: 150
-      };
-    }
-  });
-
   hotInstance = new Handsontable(handsontableContainer, {
     data: dataToLoad,
     colHeaders: ['ID', 'Item', 'Answer', 'Source', 'Definition', 'Comment'],
@@ -387,12 +374,28 @@ function loadJobData() {
     manualColumnResize: true,
     manualRowResize: true,
     contextMenu: true,
+    // Per-cell configuration for dropdowns (row-specific)
+    cells: function(row, col) {
+      const cellProperties = {};
+
+      // Configure Answer column (col 2) based on question type
+      if (col === 2 && currentTemplate.questions[row]) {
+        const question = currentTemplate.questions[row];
+        if (question.answer_type === 'dropdown' && question.answer_options.length > 0) {
+          cellProperties.type = 'dropdown';
+          cellProperties.source = question.answer_options;
+          cellProperties.strict = false; // Allow typing to filter options
+        }
+      }
+
+      return cellProperties;
+    },
     afterOnCellMouseOver: function(_event, coords, TD) {
-      // Show definition as tooltip
-      if (coords.row >= 0 && coords.col >= 0) {
-        const cellData = this.getDataAtCell(coords.row, 4); // definition column
-        if (cellData) {
-          TD.title = cellData;
+      // Show definition as tooltip on Item column hover
+      if (coords.row >= 0 && coords.col === 1) {
+        const definition = this.getDataAtCell(coords.row, 4); // definition column
+        if (definition) {
+          TD.title = definition;
         }
       }
     }
