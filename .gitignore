@@ -1,0 +1,24 @@
+# Operating System
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment variables (if you add any)
+.env
+.env.local
+
+# Note: firebase-config.js is intentionally NOT ignored
+# Firebase API keys are safe to be public - security is enforced through:
+# 1. Firestore Security Rules
+# 2. Firebase Authentication
+# 3. Authorized Domains whitelist
