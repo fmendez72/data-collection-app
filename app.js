@@ -53,7 +53,7 @@ const handsontableContainer = document.getElementById('handsontable-container');
 const saveDraftBtn = document.getElementById('save-draft-btn');
 const submitFinalBtn = document.getElementById('submit-final-btn');
 const saveMessage = document.getElementById('save-message');
-const generateMockBtn = document.getElementById('generate-mock-btn');
+// const generateMockBtn = document.getElementById('generate-mock-btn'); // Removed - button no longer in UI
 
 // ============================================================
 // AUTHENTICATION
@@ -548,9 +548,10 @@ function hideSaveMessage() {
 // MOCK DATA GENERATOR (DEPRECATED - Use Admin Panel)
 // ============================================================
 
-generateMockBtn.addEventListener('click', () => {
-  alert('Mock data generation has been moved to the Admin Panel. Please use admin.html to upload templates and manage users.');
-});
+// Button removed from UI - code kept for reference
+// generateMockBtn.addEventListener('click', () => {
+//   alert('Mock data generation has been moved to the Admin Panel. Please use admin.html to upload templates and manage users.');
+// });
 
 // ============================================================
 // INITIALIZATION
