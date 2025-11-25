@@ -1,0 +1,6 @@
+id,Answer,Item,Sources,Definition
+1,"[""Yes"",""No""]",Is there a citizen-initiated referendum at the national level?,,Add Long Definition 1
+2,"[""Yes"",""No""]",Is there an explicit legal basis for this type of instrument?,,Add Long Definition 2
+3,,What is the total number of signatures required?,,Add Long Definition 3
+4,"[""Yes"",""No""]",Is there a territorial threshold for signature gathering?,,Add Long Definition 4
+5,,What is the time limit for collecting the required number of signatures? (in days),,Add Long Definition 5

@@ -1,0 +1,4 @@
+user_email,password,assigned_jobs,role,created_date
+admin@example.com,admin123,"ref-1,agenda-1",admin,2025-01-15
+coder1@example.com,coder123,ref-1,coder,2025-01-15
+coder2@example.com,coder456,"ref-1,agenda-1",coder,2025-01-16

@@ -17,8 +17,19 @@ npm-debug.log*
 .env
 .env.local
 
+# Response data (local backups)
+responses/drafts/*.json
+responses/submitted/*.json
+
+# Keep directory structure but ignore contents
+!responses/drafts/.gitkeep
+!responses/submitted/.gitkeep
+
 # Note: firebase-config.js is intentionally NOT ignored
 # Firebase API keys are safe to be public - security is enforced through:
 # 1. Firestore Security Rules
 # 2. Firebase Authentication
 # 3. Authorized Domains whitelist
+
+# Note: config/users.csv template is committed for reference
+# Actual user data with passwords should be kept secure locally
