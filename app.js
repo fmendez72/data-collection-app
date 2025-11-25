@@ -416,6 +416,12 @@ function loadJobData() {
 
 saveDraftBtn.addEventListener('click', async () => {
   try {
+    // Force Handsontable to commit any active cell edits before saving
+    const activeEditor = hotInstance.getActiveEditor();
+    if (activeEditor) {
+      activeEditor.finishEditing();
+    }
+
     saveDraftBtn.disabled = true;
     saveDraftBtn.textContent = 'Saving...';
 
@@ -459,6 +465,12 @@ saveDraftBtn.addEventListener('click', async () => {
 });
 
 submitFinalBtn.addEventListener('click', async () => {
+  // Force Handsontable to commit any active cell edits before proceeding
+  const activeEditor = hotInstance.getActiveEditor();
+  if (activeEditor) {
+    activeEditor.finishEditing();
+  }
+
   const confirmed = confirm(
     'Are you sure you want to submit this job? Once submitted, you will not be able to make any further changes.'
   );
