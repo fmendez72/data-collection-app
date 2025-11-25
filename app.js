@@ -189,8 +189,14 @@ async function loadAssignedJobs() {
     }
   } catch (error) {
     console.error('Error loading assigned jobs:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      userProfile: userProfile,
+      currentUser: currentUser?.email
+    });
     jobsLoading.classList.add('d-none');
-    alert('Failed to load jobs. Please refresh the page.');
+    alert(`Failed to load jobs: ${error.message}\n\nCheck browser console for details.`);
   }
 }
 
