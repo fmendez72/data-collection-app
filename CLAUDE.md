@@ -182,6 +182,82 @@ data-collection-app/
 3. Verify user document exists in Firestore `users` collection
 4. Check Firestore Security Rules
 
+## Troubleshooting Common Issues
+
+### Admin Panel: "Access denied. Admin privileges required"
+**Symptoms**: Admin can't log into admin panel, or gets logged out when creating users.
+
+**Causes & Solutions**:
+1. **User document missing `role: "admin"`**
+   - Go to Firestore → `users` collection → Find user document
+   - Verify `role` field is exactly `"admin"` (lowercase)
+
+2. **User document doesn't exist in Firestore**
+   - User exists in Firebase Auth but not in Firestore `users` collection
+   - Manually create document with ID = email address
+   - Add fields: `email`, `assigned_jobs: []`, `role: "admin"`, `created_at`
+
+3. **Automatic logout when creating users (expected behavior)**
+   - Firebase's `createUserWithEmailAndPassword()` logs you in as the newly created user
+   - This is a Firebase limitation, not a bug
+   - Solution: Just log back in as admin after user creation completes
+   - Warning message added to admin.html to inform users
+
+### Coder Panel: "Failed to load jobs"
+**Symptoms**: Coder logs in successfully but jobs don't load, shows "Missing or insufficient permissions".
+
+**Causes & Solutions**:
+1. **Firestore Security Rules too restrictive**
+   - Ensure rules allow authenticated users to read templates:
+   ```javascript
+   match /templates/{templateId} {
+     allow read: if request.auth != null;
+   }
+   ```
+
+2. **User document missing or malformed**
+   - Check Firestore → `users` collection → user email document
+   - Verify `assigned_jobs` is an array of job IDs (e.g., `["ref-1", "agenda-1"]`)
+   - Job IDs must match template document IDs in `templates` collection
+
+3. **Templates not uploaded**
+   - Verify templates exist in Firestore `templates` collection
+   - Template `job_id` field must match the job ID in user's `assigned_jobs` array
+
+4. **Rules not published or propagated**
+   - After updating Firestore Rules, click "Publish" and wait 30-60 seconds
+   - Try in fresh incognito window to avoid cache
+
+### Handsontable: Dropdowns not showing
+**Symptoms**: Answer column shows text input instead of dropdown.
+
+**Solution**: This was fixed in v2.1. Ensure you're using the latest version from GitHub.
+
+**How to verify**:
+1. Check [app.js:378-392](app.js#L378-L392) contains the `cells()` callback
+2. Hard refresh browser (Ctrl+Shift+R or Cmd+Shift+R)
+3. Check that template CSV has proper dropdown format: `"[""Yes"",""No""]"`
+
+### Handsontable: Tooltips not showing
+**Symptoms**: Hovering over Item column doesn't show definition.
+
+**Solution**: This was fixed in v2.1. Ensure tooltip code targets `coords.col === 1`.
+
+**How to verify**:
+1. Check [app.js:393-401](app.js#L393-L401) has `coords.col === 1`
+2. Verify template CSV has definitions in the "Definition" column
+3. Hard refresh browser
+
+### Data Loss: Edits not saved on submit
+**Symptoms**: User's last edit before clicking Submit Final is lost.
+
+**Solution**: This was fixed in v2.1. The `finishEditing()` call ensures active edits are committed.
+
+**How to verify**:
+1. Check [app.js:460-464](app.js#L460-L464) has `finishEditing()` call
+2. Test: Edit a cell, don't press Enter, click Submit Final immediately
+3. Check Firestore to verify the edit was saved
+
 ## Known Limitations & Future Enhancements
 
 ### Current Limitations
@@ -190,7 +266,8 @@ data-collection-app/
 3. No CSV export of responses (manual Firestore export needed)
 4. No email verification or password reset flow
 5. No audit log of who changed what when
-6. Handsontable dropdown limited to same options for all rows (can't vary per question yet)
+6. UI needs improvement: inconsistent font weights, too many colors
+7. Admin user creation causes temporary logout (Firebase limitation)
 
 ### Planned Enhancements
 1. Export responses to CSV from admin panel
@@ -201,6 +278,7 @@ data-collection-app/
 6. Undo/redo functionality
 7. Bulk template upload (multiple CSVs at once)
 8. User self-service password reset
+9. UI/UX improvements: consistent typography, simplified color scheme
 
 ## Code Style & Conventions
 
@@ -268,9 +346,89 @@ git push origin main
 - **GitHub**: https://github.com/fmendez72/data-collection-app
 - **Live Site**: https://fmendez72.github.io/data-collection-app/
 
+## Critical Bugs Fixed (Post-Deployment)
+
+### Bug #1: Data Loss on Submit (2025-01-25)
+**Issue**: When user edited a cell and clicked Submit Final without pressing Enter first, the edit was lost.
+
+**Root Cause**: Handsontable doesn't commit active cell edits until user presses Enter or clicks away. Calling `getData()` while editor is active returns old data.
+
+**Fix**: Added `finishEditing()` call before `getData()` in both Save Draft and Submit Final handlers.
+
+**Code Location**: [app.js:417-421](app.js#L417-L421) and [app.js:460-464](app.js#L460-L464)
+
+```javascript
+// Force Handsontable to commit any active cell edits before saving
+const activeEditor = hotInstance.getActiveEditor();
+if (activeEditor) {
+  activeEditor.finishEditing();
+}
+```
+
+### Bug #2: Dropdowns Not Working (2025-01-25)
+**Issue**: Dropdown options not showing in Answer column. All questions had same dropdown or no dropdown.
+
+**Root Cause**: Code used `forEach` loop to override `columns[2]` for each question, resulting in only the last question's dropdown being applied to all rows.
+
+**Fix**: Replaced column-wide configuration with `cells()` callback for per-row dropdown configuration.
+
+**Code Location**: [app.js:378-392](app.js#L378-L392)
+
+```javascript
+cells: function(row, col) {
+  const cellProperties = {};
+
+  if (col === 2 && currentTemplate.questions[row]) {
+    const question = currentTemplate.questions[row];
+    if (question.answer_type === 'dropdown' && question.answer_options.length > 0) {
+      cellProperties.type = 'dropdown';
+      cellProperties.source = question.answer_options;
+      cellProperties.strict = false; // Allow typing to filter
+    }
+  }
+
+  return cellProperties;
+}
+```
+
+### Bug #3: Definition Tooltips Not Showing (2025-01-25)
+**Issue**: Hovering over questions didn't show definition tooltips.
+
+**Root Cause**: Tooltip code checked `coords.col >= 0` (any column) instead of specifically targeting the Item column.
+
+**Fix**: Changed hover target to `coords.col === 1` (Item column only).
+
+**Code Location**: [app.js:393-401](app.js#L393-L401)
+
+```javascript
+afterOnCellMouseOver: function(_event, coords, TD) {
+  // Show definition as tooltip on Item column hover
+  if (coords.row >= 0 && coords.col === 1) {
+    const definition = this.getDataAtCell(coords.row, 4);
+    if (definition) {
+      TD.title = definition;
+    }
+  }
+}
+```
+
+### Bug #4: Comment Column Not Editable (2025-01-25)
+**Issue**: Users couldn't type in Comment column.
+
+**Root Cause**: Same as Bug #2 - the broken dropdown configuration was interfering with all column settings.
+
+**Fix**: Fixed by implementing proper `cells()` callback (see Bug #2 fix).
+
 ## Version History
 
-### v2.0 (2025-01-25) - Current
+### v2.1 (2025-01-25) - Bug Fixes
+- Fixed data loss on submit (finishEditing before getData)
+- Fixed per-row dropdown configuration (cells callback)
+- Fixed definition tooltips (target Item column specifically)
+- Fixed Comment column editability
+- All core Handsontable features now working correctly
+
+### v2.0 (2025-01-25) - Major Overhaul
 - Complete architecture overhaul
 - CSV-based user/template management
 - Admin panel with bulk upload
@@ -306,17 +464,46 @@ When helping with this project:
 - **"CSV upload fails"** → Check CSV format, verify admin role in Firestore
 - **"Auth error"** → Check Authorized Domains in Firebase Console
 - **"Jobs not showing"** → Check user's `assigned_jobs` array in Firestore matches template `job_id`
+- **"Dropdowns not working"** → Verify cells() callback in app.js (fixed in v2.1)
+- **"Data not saving"** → Check finishEditing() is called before getData() (fixed in v2.1)
+- **"UI needs improvement"** → See "Planned Enhancements" section
 
 ### Files You'll Most Often Edit
 
 - **app.js** - Main logic, grid config, save/submit handlers
-- **admin.js** - CSV parsing, Firestore uploads
+- **scripts/admin.js** - CSV parsing, Firestore uploads
 - **style.css** - UI styling, login page, grid appearance
 - **README.md** - User documentation
 - **CLAUDE.md** (this file) - Project context for future sessions
 
+## Important Implementation Notes
+
+### Handsontable Configuration
+- **Per-row dropdowns**: MUST use `cells()` callback, NOT column-wide config
+- **Tooltip display**: Target `coords.col === 1` (Item column), read from column 4 (Definition)
+- **Data commit**: ALWAYS call `finishEditing()` before `getData()`
+- **Read-only state**: Check `currentJob.status === 'submitted'` before configuring grid
+
+### Firebase Auth & Firestore
+- **Document IDs**: Use email addresses as document IDs in `users` collection
+- **Security Rules**: Authenticated users can read templates, only admins can write
+- **User creation**: Causes automatic login as new user (expected Firebase behavior)
+- **Rule propagation**: Wait 30-60 seconds after publishing rules
+
+### CSV Format
+- **Dropdown options**: Must be JSON array string: `"[""Yes"",""No""]"`
+- **Assigned jobs**: Comma-separated in quotes: `"ref-1,agenda-1"`
+- **Empty fields**: Leave blank, don't use "null" or "undefined"
+
+### Deployment
+- Changes to HTML/CSS/JS require git push to GitHub
+- GitHub Pages deploys automatically in 1-2 minutes
+- Hard refresh required to see changes (Ctrl+Shift+R or Cmd+Shift+R)
+- Firebase data (Firestore, Auth) is live immediately, no deployment needed
+
 ---
 
 **Last Updated**: 2025-01-25
-**Current Version**: v2.0
+**Current Version**: v2.1
 **Maintainer**: Fernando Mendez
+**Status**: Production - All critical bugs fixed, UI improvements pending
