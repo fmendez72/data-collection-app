@@ -141,10 +141,17 @@ uploadUsersBtn.addEventListener('click', async () => {
 
     for (const user of users) {
       try {
-        // Create Firebase Auth user
-        await createUserWithEmailAndPassword(auth, user.email, user.password);
+        // Try to create Firebase Auth user first
+        try {
+          await createUserWithEmailAndPassword(auth, user.email, user.password);
+        } catch (authError) {
+          // If user already exists in Auth, that's okay, continue to Firestore
+          if (authError.code !== 'auth/email-already-in-use') {
+            throw authError;
+          }
+        }
 
-        // Create user document in Firestore
+        // Create/update user document in Firestore (works regardless of Auth result)
         await setDoc(doc(db, 'users', user.email), {
           email: user.email,
           assigned_jobs: user.assigned_jobs,
@@ -154,24 +161,8 @@ uploadUsersBtn.addEventListener('click', async () => {
 
         successCount++;
       } catch (error) {
-        console.error(`Failed to create user ${user.email}:`, error);
-        // If user already exists, try updating Firestore document
-        if (error.code === 'auth/email-already-in-use') {
-          try {
-            await setDoc(doc(db, 'users', user.email), {
-              email: user.email,
-              assigned_jobs: user.assigned_jobs,
-              role: user.role,
-              created_at: new Date().toISOString()
-            });
-            successCount++;
-          } catch (updateError) {
-            console.error(`Failed to update user ${user.email}:`, updateError);
-            errorCount++;
-          }
-        } else {
-          errorCount++;
-        }
+        console.error(`Failed to process user ${user.email}:`, error);
+        errorCount++;
       }
     }
 

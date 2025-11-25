@@ -75,6 +75,9 @@
                                     Upload a CSV file to create user accounts and assign jobs.
                                     <a href="config/README.md" target="_blank">View CSV format</a>
                                 </p>
+                                <div class="alert alert-warning">
+                                    <strong>Note:</strong> Creating new users will log you out temporarily. You'll need to log back in as admin after the upload completes. This is a Firebase limitation.
+                                </div>
                                 <div class="mb-3">
                                     <label for="users-csv-file" class="form-label">Select users.csv file</label>
                                     <input class="form-control" type="file" id="users-csv-file" accept=".csv">
