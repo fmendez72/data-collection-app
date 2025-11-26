@@ -391,10 +391,17 @@ function parseCSVLine(line) {
 
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
+    const nextChar = line[i + 1];
 
-    if (char === '"') {
+    if (char === '"' && nextChar === '"' && inQuotes) {
+      // Double quote inside quoted field - add single quote
+      current += '"';
+      i++; // Skip next quote
+    } else if (char === '"') {
+      // Toggle quote mode
       inQuotes = !inQuotes;
     } else if (char === ',' && !inQuotes) {
+      // Comma outside quotes - field delimiter
       result.push(current.trim());
       current = '';
     } else {

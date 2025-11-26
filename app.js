@@ -287,9 +287,6 @@ function loadJobData() {
   // Prepare data for Handsontable
   let dataToLoad = [];
 
-  console.log('Loading job data. Current template:', currentTemplate);
-  console.log('Template questions:', currentTemplate.questions);
-
   if (currentResponse && currentResponse.data) {
     // Load saved response
     dataToLoad = currentResponse.data.map(q => [
@@ -311,8 +308,6 @@ function loadJobData() {
       q.comment
     ]);
   }
-
-  console.log('Data to load into Handsontable:', dataToLoad);
 
   const isReadOnly = currentJob.status === 'submitted';
 
@@ -386,14 +381,10 @@ function loadJobData() {
       // Configure Answer column (col 2) based on question type
       if (col === 2 && currentTemplate.questions[row]) {
         const question = currentTemplate.questions[row];
-        console.log(`Row ${row}, Col ${col} - Question:`, question);
-        console.log(`Answer type: ${question.answer_type}, Options:`, question.answer_options);
-
         if (question.answer_type === 'dropdown' && question.answer_options.length > 0) {
           cellProperties.type = 'dropdown';
           cellProperties.source = question.answer_options;
           cellProperties.strict = false; // Allow typing to filter options
-          console.log(`Setting dropdown for row ${row}:`, cellProperties);
         }
       }
 

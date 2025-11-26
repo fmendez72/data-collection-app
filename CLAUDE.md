@@ -419,7 +419,54 @@ afterOnCellMouseOver: function(_event, coords, TD) {
 
 **Fix**: Fixed by implementing proper `cells()` callback (see Bug #2 fix).
 
+### Bug #5: CSV Parsing - Escaped Quotes Not Handled (2025-11-26)
+**Issue**: Template CSV files with dropdown options `"[""Yes"",""No""]"` were parsed incorrectly, resulting in `answer_type: "text"` and empty `answer_options` arrays in Firestore. Dropdowns never appeared because the data was malformed.
+
+**Root Cause**: The `parseCSVLine()` function in admin.js didn't handle CSV-escaped quotes properly. CSV standard uses `""` to represent a literal quote inside a quoted field, but the parser just toggled quote mode without checking for double quotes.
+
+**Fix**: Updated `parseCSVLine()` to detect and handle `""` (double quotes) as escaped quotes inside quoted fields.
+
+**Code Location**: [scripts/admin.js:387-414](scripts/admin.js#L387-L414)
+
+```javascript
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+
+    if (char === '"' && nextChar === '"' && inQuotes) {
+      // Double quote inside quoted field - add single quote
+      current += '"';
+      i++; // Skip next quote
+    } else if (char === '"') {
+      // Toggle quote mode
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      // Comma outside quotes - field delimiter
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  result.push(current.trim());
+  return result;
+}
+```
+
+**Impact**: This bug affected ALL dropdown fields in templates. After fixing, admins must re-upload template CSVs to populate Firestore with correct dropdown configuration.
+
 ## Version History
+
+### v2.2 (2025-11-26) - Critical Bug Fix
+- Fixed CSV parsing to handle escaped quotes in dropdown options
+- Templates must be re-uploaded via Admin Panel for dropdowns to work
+- UI improvements: standardized fonts, simplified colors, softer shadows
 
 ### v2.1 (2025-01-25) - Bug Fixes
 - Fixed data loss on submit (finishEditing before getData)
@@ -503,7 +550,7 @@ When helping with this project:
 
 ---
 
-**Last Updated**: 2025-01-25
-**Current Version**: v2.1
+**Last Updated**: 2025-11-26
+**Current Version**: v2.2
 **Maintainer**: Fernando Mendez
-**Status**: Production - All critical bugs fixed, UI improvements pending
+**Status**: Production - CSV parsing fixed, templates must be re-uploaded
